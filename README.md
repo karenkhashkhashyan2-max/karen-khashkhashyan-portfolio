@@ -1,60 +1,59 @@
-# Karen Khashkhashyan Portfolio
+# Karen Khashkhashyan · Portfolio
 
-A static portfolio for Karen Khashkhashyan, Product Designer in iGaming.
-This export includes the current 22 projects, all game screenshots and thumbnails,
-Russo One font, downloadable CV, and responsive category galleries.
-Desktop displays two games per row; mobile displays one.
+Static portfolio of Karen Khashkhashyan, Product Designer in iGaming.
+Live: https://karenkhashkhashyan2-max.github.io/karen-khashkhashyan-portfolio/
 
-## Publish with GitHub Pages
+No build step, no npm install, no backend. GitHub Pages serves the repository root.
 
-1. Create a GitHub repository named `karen-khashkhashyan-portfolio`.
-   A public repository works with GitHub Free.
-2. Unzip this download. Upload the CONTENTS of this folder to the repository,
-   including `index.html`, `style.css`, `app.js`, and the entire `assets` folder.
-   `index.html` must be at the repository root, not inside another folder.
-   Upload the files, not the ZIP archive. Commit the upload to `main`.
-3. Open repository Settings > Pages.
-4. Under Build and deployment, select Deploy from a branch.
-5. Choose `main` and `/ (root)`, then Save.
-6. GitHub shows the published website address on the Pages settings screen.
-   Publishing may take up to ten minutes.
+## Files
 
-No build command, npm installation, backend, or API key is needed.
+| File | What it holds |
+|---|---|
+| `index.html` | Page structure and the English text of every section |
+| `i18n.js` | Interface text in English, Armenian and Russian (`data-t="key"` in the HTML) |
+| `projects.js` | Every project: order, category, links and case-study text |
+| `app.js` | Behaviour: languages, work grid, reels, case study, timeline, motion |
+| `style.css` | Design tokens, layout, components, responsive rules |
+| `assets/img/<slug>/` | Web images per project (see below) |
+| `assets/vendor/` | GSAP 3.15 (ScrollTrigger, Flip) and Lenis 1.3, copied from npm |
+| `assets/Karen-Khashkhashyan-CV-ATS.pdf` | One-column, text-based CV linked from the site |
+| `tools/images.mjs` | Builds the web images for a project |
+| `docs/REDESIGN-NOTES.md` | What changed in the 2026 redesign and open content questions |
+
+## Edit text
+
+- Interface and section text: `i18n.js`. Keep the same key in `en`, `hy` and `ru`.
+- Project text: `projects.js`. A plain string shows in every language; `{ en, hy, ru }` is translated.
+- Experience rows: `index.html` (`data-start` / `data-end` drive the timeline bars and durations).
+
+## Add a project
+
+1. Copy an entry in `projects.js` and change `slug`, `name`, `category`, `platform`, `link` and the text.
+2. Build its images (needs Node 18+):
+   ```bash
+   npm i --no-save sharp
+   node tools/images.mjs my-game path/to/key-art.png path/to/desktop.png path/to/mobile.png
+   ```
+   Sportsbook projects use 16:9 cards: add `--wide`. Without a mobile screen, set `mobile: false`.
+3. The grid, filters, counts, reels and case study pick the project up automatically.
+
+## Motion
+
+- Hero reels follow the Shining Pop V2 reel timing (wind-up, one stop tween with overshoot, 110 ms stagger).
+- Case studies open with a shared-element flight from the clicked card; arrows and ← → keys move between projects; links like `#work/rockbet` open a case directly.
+- The manifesto and principles are scroll-driven; the WebGL reel-stop hover runs only on desktop pointers with WebGL.
+- Everything respects `prefers-reduced-motion`; without JavaScript the page still shows its text, and the CV lists all work.
 
 ## Preview locally
 
-Open `index.html` in a browser, or run `python3 -m http.server 8000`
-from this directory and visit http://localhost:8000.
+```bash
+python3 -m http.server 8000
+```
 
-## Edit the website
-
-- `index.html`: content, project cards, case studies, contact information, and links.
-- `style.css`: typography, colors, spacing, responsive layouts.
-- `app.js`: language switching, category grouping, and project dialogs.
-- `assets/`: images, fonts and CV. Keep the folder structure intact.
-
-Project cards use `data-category` for grouping. Supported current names include
-`Bet-on Games`, `Table Games`, `Slots`, and `Betshop Games`.
-New category names generate a new section heading automatically.
-The latest Slots and Betshop case studies preserve the original English PDF text;
-other existing translated content and translated interface labels are included.
-
-The website uses Google Fonts for Manrope and Noto Sans Armenian and opens
-external game links. These features require internet access. Russo One and all
-project images are included locally.
+Then open http://localhost:8000.
 
 ## Ownership
 
-Personal portfolio content belongs to Karen Khashkhashyan. Game artwork and
-third-party brands retain their respective ownership. This export grants no
-additional license to third-party game assets. The included font license is
-provided with the font files.
-
-## Future updates
-
-This is an independent copy of the current portfolio. Later edits to the Sites
-version will not automatically update GitHub, and vice versa.
-
-Official instructions:
-https://docs.github.com/en/pages/quickstart
-https://docs.github.com/en/repositories/working-with-files/managing-files/adding-a-file-to-a-repository
+Personal portfolio content belongs to Karen Khashkhashyan. Game artwork and third-party brands retain
+their respective ownership. GSAP is used under its standard no-charge license; Lenis and Russo One ship
+with their own licenses.
