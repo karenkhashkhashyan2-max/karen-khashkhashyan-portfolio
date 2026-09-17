@@ -163,7 +163,7 @@
     grid.dataset.group = state.group;
     filtersEl.hidden = state.group !== 'games';
     cards.forEach((c) => { c.hidden = !shouldShow(bySlug[c.dataset.slug].p); });
-    if (hasGsap) gsap.set(leaving, { clearProps: 'opacity,transform' });
+    if (hasGsap && leaving.length) gsap.set(leaving, { clearProps: 'opacity,transform' });
 
     const work = $('#work');
     if (work.getBoundingClientRect().top < -80) scrollToElement(work, { immediate: !animated });
@@ -466,9 +466,13 @@
     const linkLabel = p.link.kind === 'figma' ? t('figma') : t('play', { name: p.name });
     const sourceNote = lang !== 'en' && [p.intro, p.problem, p.contribution, p.validation].some((v) => typeof v === 'string');
     const heading = (key) => t(key === 'validation' && p.validationLabel === 'review' ? 'review' : key);
+    const lo = loSrc || img(p, 'cover-640');
 
     return `
-      <div class="case-cover"><img class="cover-lo" src="${loSrc || img(p, 'cover-640')}" alt=""><img class="cover-hi" src="${img(p, 'cover-1280')}" alt="" decoding="async"></div>
+      <div class="case-cover">
+        <img class="cover-ambient" src="${lo}" alt="">
+        <div class="cover-frame${isSportsbook(p) ? ' is-wide' : ''}"><img class="cover-lo" src="${lo}" alt=""><img class="cover-hi" src="${img(p, 'cover-1280')}" alt="" decoding="async"></div>
+      </div>
       <header class="case-head">
         <div class="case-main" data-reveal>
           ${p.headline ? `<p class="case-name">${esc(p.name)}</p>` : ''}
@@ -544,7 +548,8 @@
     dialog.append(flyer);
     return flyer;
   }
-  const sourceImage = (el) => el?.querySelector?.('img')?.currentSrc || '';
+  const sourceImage = (el) => (el?.querySelector?.('.cover-hi.is-loaded') || el?.querySelector?.('img'))?.currentSrc || '';
+  const radiusOf = (el) => parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
 
   function openCase(slug, { from = null, push = true } = {}) {
     const entry = bySlug[slug];
@@ -573,15 +578,17 @@
       return;
     }
     const cover = $('.case-cover', dialog);
-    const target = cover.getBoundingClientRect();
-    const flyer = makeFlyer(rect, sourceImage(from), 14);
-    gsap.set(cover, { opacity: 0 });
+    const frame = $('.cover-frame', cover);
+    const target = frame.getBoundingClientRect();
+    const flyer = makeFlyer(rect, sourceImage(from), radiusOf(from));
+    gsap.set(frame, { opacity: 0 });
     gsap.set(dialog, { '--case-bg': 0 });
-    gsap.set([caseBar, ...reveals], { opacity: 0 });
+    gsap.set([cover, caseBar, ...reveals], { opacity: 0 });
     flight = gsap.timeline({ onComplete: () => { flight = null; } })
-      .to(flyer, { left: target.left, top: target.top, width: target.width, height: target.height, borderRadius: 0, '--fade': 1, duration: 0.85, ease: 'expo.inOut' }, 0)
+      .to(flyer, { left: target.left, top: target.top, width: target.width, height: target.height, borderRadius: radiusOf(frame), duration: 0.85, ease: 'expo.inOut' }, 0)
       .to(dialog, { '--case-bg': 1, duration: 0.55, ease: 'power2.inOut' }, 0.12)
-      .set(cover, { opacity: 1 }, 0.85)
+      .to(cover, { opacity: 1, duration: 0.6, ease: 'power2.out', clearProps: 'opacity' }, 0.3)
+      .set(frame, { clearProps: 'opacity' }, 0.85)
       .call(() => flyer.remove(), null, 0.85)
       .to(caseBar, { opacity: 1, duration: 0.4, ease: 'power2.out', clearProps: 'opacity' }, 0.55)
       .fromTo(reveals, { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.07, clearProps: 'opacity,transform' }, 0.62);
@@ -600,22 +607,28 @@
     };
     if (!motionOK()) { swap(); return; }
     flight?.progress(1);
-    const oldCover = $('.case-cover', dialog);
-    const oldRect = oldCover.getBoundingClientRect();
+    const oldFrame = $('.cover-frame', dialog);
+    const oldRect = oldFrame.getBoundingClientRect();
     const coverInView = oldRect.bottom > 80;
     flight = gsap.timeline({ onComplete: () => { flight = null; } })
       .to($$('.case-head, .case-screens, .case-story, .case-next', dialog), { opacity: 0, y: -14, duration: 0.16, ease: 'power1.in' })
+      .to($('.cover-ambient', dialog), { opacity: 0, duration: 0.16, ease: 'power1.in' }, 0)
       .add(() => {
-        const ghost = coverInView ? makeFlyer(oldRect, sourceImage(oldCover), 0) : null;
-        if (ghost) { ghost.classList.add('is-ghost'); gsap.set(ghost, { '--fade': 1 }); }
+        const radius = radiusOf(oldFrame);
+        const ghost = coverInView ? makeFlyer(oldRect, sourceImage(oldFrame), radius) : null;
+        ghost?.classList.add('is-ghost');
         swap();
         const cover = $('.case-cover', dialog);
         const edge = dir > 0 ? 'inset(0% 0% 0% 100%)' : 'inset(0% 100% 0% 0%)';
-        gsap.timeline({ onComplete: () => ghost?.remove() })
+        const wipe = gsap.timeline({ onComplete: () => ghost?.remove() })
           .fromTo(cover, { clipPath: edge }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 0.75, ease: 'expo.out', clearProps: 'clipPath' }, 0)
-          .fromTo($$('img', cover), { scale: 1.1, xPercent: 5 * dir }, { scale: 1, xPercent: 0, duration: 1, ease: 'expo.out', clearProps: 'transform' }, 0)
-          .to(ghost, { xPercent: -10 * dir, opacity: 0.35, duration: 0.75, ease: 'expo.out' }, 0)
+          .fromTo($$('.cover-frame img', cover), { scale: 1.1, xPercent: 5 * dir }, { scale: 1, xPercent: 0, duration: 1, ease: 'expo.out', clearProps: 'transform' }, 0)
           .fromTo($$('[data-reveal]', dialog), { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: 'expo.out', stagger: 0.06, clearProps: 'opacity,transform' }, 0.12);
+        if (!ghost) return;
+        // A shorter new cover (a 16:9 sportsbook after a game) must not leave the ghost hanging below it.
+        const overhang = oldRect.bottom - cover.getBoundingClientRect().bottom;
+        if (overhang > 0) gsap.set(ghost, { clipPath: `inset(0px 0px ${overhang}px 0px round ${radius}px)` });
+        wipe.to(ghost, { xPercent: -10 * dir, opacity: 0.35, duration: 0.75, ease: 'expo.out' }, 0);
       });
   }
   const stepCase = (delta) => stepTo((caseIndex + delta + PROJECTS.length) % PROJECTS.length, delta);
@@ -647,7 +660,8 @@
 
     const target = originStillValid ? caseOrigin : card;
     const cover = $('.case-cover', dialog);
-    const coverRect = cover.getBoundingClientRect();
+    const frame = $('.cover-frame', cover);
+    const coverRect = frame.getBoundingClientRect();
     const coverInView = coverRect.bottom > innerHeight * 0.3;
     if (target && coverInView && !originStillValid && !onScreen(target.getBoundingClientRect())) {
       scrollToElement(target, { immediate: true, center: true });
@@ -663,13 +677,12 @@
         .to(dialog, { '--case-bg': 0, duration: 0.26, ease: 'power2.out' });
       return;
     }
-    const flyer = makeFlyer(coverRect, sourceImage(cover), 0);
-    gsap.set(flyer, { '--fade': 1 });
-    gsap.set(cover, { opacity: 0 });
+    const flyer = makeFlyer(coverRect, sourceImage(frame), radiusOf(frame));
+    gsap.set(frame, { opacity: 0 });
     gsap.timeline({ onComplete: finish })
-      .to(content, { opacity: 0, duration: 0.2, ease: 'power1.in' }, 0)
+      .to([...content, cover], { opacity: 0, duration: 0.2, ease: 'power1.in' }, 0)
       .to(dialog, { '--case-bg': 0, duration: 0.5, ease: 'power2.inOut' }, 0.08)
-      .to(flyer, { left: rect.left, top: rect.top, width: rect.width, height: rect.height, borderRadius: 14, '--fade': 0, duration: 0.75, ease: 'expo.inOut' }, 0);
+      .to(flyer, { left: rect.left, top: rect.top, width: rect.width, height: rect.height, borderRadius: radiusOf(target), duration: 0.75, ease: 'expo.inOut' }, 0);
   }
 
   dialog.addEventListener('close', () => {
@@ -934,9 +947,11 @@
         el.innerHTML = t(el.dataset.t);
         return splitWords(el);
       });
+      // The pins are created after scrollMotion's triggers further down the page; refreshPriority makes
+      // ScrollTrigger refresh in page order, so those triggers include the pin spacing.
       gsap.timeline({
         scrollTrigger: wide
-          ? { trigger: '.manifesto', start: 'top top', end: '+=120%', scrub: 0.5, pin: true, anticipatePin: 1 }
+          ? { trigger: '.manifesto', start: 'top top', end: '+=120%', scrub: 0.5, pin: true, anticipatePin: 1, refreshPriority: 1 }
           : { trigger: '.manifesto', start: 'top 75%', end: 'bottom 70%', scrub: 0.5 },
       })
         .fromTo(words, { opacity: 0.36 }, { opacity: 1, ease: 'none', stagger: 0.1 })
@@ -959,7 +974,7 @@
         const tl = gsap.timeline({
           defaults: { ease: 'none' },
           scrollTrigger: {
-            trigger: list, start: 'top top', end: `+=${panels.length * 110}%`, pin: true, scrub: 0.6, anticipatePin: 1,
+            trigger: list, start: 'top top', end: `+=${panels.length * 110}%`, pin: true, scrub: 0.6, anticipatePin: 1, refreshPriority: 1,
             onUpdate: (self) => activate(Math.min(panels.length - 1, Math.floor(self.progress * panels.length * 0.999 + 0.12))),
             onLeave: () => activate(-1),
             onLeaveBack: () => activate(-1),
@@ -993,10 +1008,13 @@
   }
 
   /* ---------------- WebGL reel-stop hover ----------------
-     Hovering a card spins its key art like a reel: the art smears down with an RGB split and the
-     interface screen lands in its place on the same V2 stop curve as the hero reels. Leaving spins
-     the art back in. One shared canvas, drawn only while a tween runs; desktop pointers only.
+     Hovering a card spins a strip of key art and interface screen like a reel, in the direction the
+     pointer came from, and lands on the screen with the V2 stop curve of the hero reels. While hovered
+     the strip leans toward the pointer; a quick vertical flick spins it again. Leaving spins the art
+     back in. One shared canvas, drawn only while the strip moves; desktop pointers only.
      Without WebGL the CSS wipe of .card-screen stays as the fallback. */
+  const HOVER = { tiles: 5, spin: 0.5, out: 0.4, flick: 0.42, lean: 0.07, flickSpeed: 4 };
+
   function initReelHover() {
     if (!motionOK() || !finePointer.matches || (navigator.deviceMemory && navigator.deviceMemory < 4)) return;
     const canvas = document.createElement('canvas');
@@ -1021,8 +1039,9 @@
       }
       void main() {
         float s = uv.y + uShift;
-        float split = 0.035 * uSpeed;
-        float blur = 0.16 * uSpeed;
+        if (uSpeed < 0.001) { gl_FragColor = vec4(strip(s, uv.x), 1.0); return; }
+        float split = 0.04 * uSpeed;
+        float blur = 0.2 * uSpeed;
         vec3 col = vec3(0.0);
         for (int i = 0; i < 7; i++) {
           float o = (float(i) / 6.0 - 0.5) * blur;
@@ -1070,7 +1089,7 @@
     });
 
     let lost = false;
-    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; root.classList.remove('has-fx'); canvas.remove(); });
+    canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; root.classList.remove('has-fx'); release(); });
     root.classList.add('has-fx');
 
     // object-fit: cover as a uv scale + offset
@@ -1088,33 +1107,97 @@
       }
       return screens.get(p.slug);
     };
+    // Fetch the screens of cards in view ahead of time, so the first hover spins at once.
+    if (!navigator.connection?.saveData) {
+      const io = new IntersectionObserver((entries) => entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        io.unobserve(entry.target);
+        screenFor(bySlug[entry.target.dataset.slug].p);
+      }));
+      $$('.card', grid).forEach((card) => io.observe(card));
+    }
 
-    const state = { shift: 0, speed: 0 };
+    // Strip position in tiles: odd tiles are the interface screen, even tiles the key art.
+    const state = { shift: 0, lean: 0 };
+    const leanTo = gsap.quickTo(state, 'lean', { duration: 0.6, ease: 'power3' });
     let active = null;
     let tween = null;
     let heading = 0;
-    const release = () => { canvas.remove(); active = null; state.shift = 0; heading = 0; };
-    const draw = () => {
-      gl.uniform1f(u.uShift, state.shift);
-      gl.uniform1f(u.uSpeed, state.speed);
+    let speed = 0;
+    let drawn = { pos: 0, speed: 0 };
+    let pointer = null;
+
+    const draw = (pos, v) => {
+      gl.uniform1f(u.uShift, pos);
+      gl.uniform1f(u.uSpeed, v);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      drawn = { pos, speed: v };
+    };
+    // Blur and RGB split follow the strip's measured speed, so spins, flicks and the lean share one look.
+    const tick = (time, deltaTime) => {
+      const pos = state.shift + state.lean;
+      const moved = Math.abs(pos - drawn.pos);
+      const now = Math.min(1, ((moved / Math.max(deltaTime, 8)) * 1000) / 14);
+      speed = now > speed ? now : speed + (now - speed) * 0.5;
+      if (speed < 0.004) speed = 0;
+      if (moved > 1e-5 || speed !== drawn.speed) draw(pos, speed);
+    };
+    const foldLean = () => { state.shift += state.lean; state.lean = 0; leanTo(0, 0); };
+    // First tile of a kind (1 = screen, 0 = art) about `gap` tiles ahead; 0.1 absorbs the lean.
+    const tileAhead = (dir, kind, gap) => {
+      let n = dir > 0 ? Math.ceil(state.shift + gap - 0.1) : Math.floor(state.shift - gap + 0.1);
+      if (Math.abs(n % 2) !== kind) n += dir;
+      return n;
+    };
+    // Direction the strip is still travelling in, or 0 once it rests.
+    const travel = () => (Math.abs(heading - state.shift) > 0.01 ? Math.sign(heading - state.shift) : 0);
+
+    const release = () => {
+      gsap.ticker.remove(tick);
+      tween?.kill();
+      tween = null;
+      canvas.remove();
+      active = null;
+      heading = 0;
+      state.shift = 0;
+      state.lean = 0;
+      leanTo(0, 0);
     };
 
-    async function enter(link) {
+    function spin(target, duration) {
+      tween?.kill();
+      heading = target;
+      const from = state.shift;
+      const clock = { t: 0 };
+      tween = gsap.to(clock, {
+        t: 1,
+        duration,
+        ease: 'none',
+        onUpdate: () => { state.shift = from + (target - from) * reelEase(clock.t); },
+        onComplete: () => {
+          tween = null;
+          state.shift = target;
+          if (target % 2 === 0) release();
+        },
+      });
+    }
+
+    async function enter(link, e) {
       const media = $('.card-media', link);
       const cover = $('.card-cover', link);
-      const p = bySlug[link.dataset.case].p;
       if (lost || !cover.complete || !cover.naturalWidth) return;
-      screenFor(p);
+      const rect = media.getBoundingClientRect();
+      // Coming in from above runs the strip down, from below runs it up.
+      const dir = e.clientY < rect.top + rect.height / 2 ? 1 : -1;
+      pointer = null;
       if (active === media) {
-        if (heading !== 1) spinTo(1); // re-entered while leaving
+        if (heading % 2 === 0) spin(tileAhead(travel() || dir, 1, 1), HOVER.spin * 0.8);
         return;
       }
-      const screen = await screenFor(p);
+      const screen = await screenFor(bySlug[link.dataset.case].p);
       if (!screen || !link.matches(':hover')) return;
-      tween?.kill();
+      if (active) release();
       active = media;
-      const rect = media.getBoundingClientRect();
       const dpr = Math.min(devicePixelRatio || 1, 1.5);
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
@@ -1128,50 +1211,56 @@
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, screen);
       gl.uniform4fv(u.uFitA, fit(cover, aspect));
       gl.uniform4fv(u.uFitB, fit(screen, aspect));
-      state.shift = 0;
-      state.speed = 0;
-      draw();
+      speed = 0;
+      draw(0, 0);
       media.append(canvas);
-      spinTo(1);
+      gsap.ticker.add(tick);
+      spin(tileAhead(dir, 1, HOVER.tiles), HOVER.spin);
     }
 
-    function spinTo(target) {
-      tween?.kill();
-      heading = target;
-      const from = state.shift;
-      const clock = { t: 0 };
-      tween = gsap.to(clock, {
-        t: 1,
-        duration: target === 1 ? 0.8 : 0.6,
-        ease: 'none',
-        onUpdate: () => {
-          state.shift = from + (target - from) * reelEase(clock.t);
-          state.speed = Math.min(1, reelSpeed(clock.t));
-          draw();
-        },
-        onComplete: () => {
-          state.speed = 0;
-          if (target === 1) draw();
-          else release();
-        },
-      });
-    }
-
-    function leave(link) {
+    function leave(link, e) {
       if (!active || active !== $('.card-media', link)) return;
-      spinTo(state.shift < 0.5 ? 0 : 2);
+      const rect = active.getBoundingClientRect();
+      const dir = travel() || (e.clientY > rect.top + rect.height / 2 ? 1 : -1);
+      pointer = null;
+      foldLean();
+      spin(tileAhead(dir, 0, 2), HOVER.out);
+    }
+
+    // While landed on the screen the strip leans toward the pointer; a fast vertical flick spins it on.
+    function move(e) {
+      if (!active || !active.parentElement.contains(e.target)) return;
+      const rect = active.getBoundingClientRect();
+      // Speed in card heights per second, measured over windows of at least 32 ms.
+      pointer ||= { y: e.clientY, t: e.timeStamp };
+      const dt = e.timeStamp - pointer.t;
+      let v = 0;
+      if (dt >= 32) {
+        v = ((e.clientY - pointer.y) / rect.height / dt) * 1000;
+        pointer = { y: e.clientY, t: e.timeStamp };
+      }
+      if (tween) return;
+      if (Math.abs(v) > HOVER.flickSpeed) {
+        pointer = null;
+        foldLean();
+        spin(tileAhead(Math.sign(v), 1, 2), HOVER.flick);
+        return;
+      }
+      const y = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+      leanTo((y - 0.5) * 2 * HOVER.lean);
     }
 
     grid.addEventListener('pointerover', (e) => {
       const link = e.target.closest('.card-link');
-      if (link && !link.contains(e.relatedTarget)) enter(link);
+      if (link && !link.contains(e.relatedTarget)) enter(link, e);
     });
     grid.addEventListener('pointerout', (e) => {
       const link = e.target.closest('.card-link');
-      if (link && !link.contains(e.relatedTarget)) leave(link);
+      if (link && !link.contains(e.relatedTarget)) leave(link, e);
     });
+    grid.addEventListener('pointermove', move);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && active) { tween?.kill(); release(); }
+      if (document.hidden && active) release();
     });
   }
 
@@ -1246,9 +1335,11 @@
       gsap.from($$('.odo-col', odo), { yPercent: 0, duration: 1.8, ease: 'expo.out', stagger: 0.12, delay: i * 0.1, scrollTrigger: { trigger: odo, start: 'top 90%', once: true } });
     });
 
-    gsap.fromTo('.contact-bg',
-      { clipPath: 'inset(5% 4% 5% 4% round 48px)' },
-      { clipPath: 'inset(0% 0% 0% 0% round 22px)', ease: 'none', scrollTrigger: { trigger: '.contact', start: 'top bottom', end: 'top 35%', scrub: 0.6 } });
+    // The lime card opens edge to edge while its content drifts up into place; clamp() lets it finish at
+    // the bottom of the page on screens too tall for the contact top to reach 35%.
+    gsap.timeline({ defaults: { ease: 'none' }, scrollTrigger: { trigger: '.contact', start: 'top bottom', end: 'clamp(top 35%)', scrub: 0.6 } })
+      .fromTo('.contact-bg', { '--open': 0 }, { '--open': 1 }, 0)
+      .fromTo('.contact-inner', { y: 80 }, { y: 0 }, 0);
   }
 
   /* ---------------- boot ---------------- */
@@ -1278,7 +1369,10 @@
     scrollMotion();
     buildStory();
     initReelHover();
-    if (hasGsap) ScrollTrigger.refresh();
+    if (!hasGsap) return;
+    // Manrope arrives after first paint and reflows the text below the fold: measure again when it lands.
+    document.fonts?.addEventListener('loadingdone', () => ScrollTrigger.refresh());
+    ScrollTrigger.refresh();
   };
   requestAnimationFrame(() => (window.requestIdleCallback ? requestIdleCallback(afterFirstFrame, { timeout: 500 }) : setTimeout(afterFirstFrame, 60)));
 

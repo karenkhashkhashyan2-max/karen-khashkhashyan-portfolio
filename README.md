@@ -35,13 +35,16 @@ No build step, no npm install, no backend. GitHub Pages serves the repository ro
    node tools/images.mjs my-game path/to/key-art.png path/to/desktop.png path/to/mobile.png
    ```
    Sportsbook projects use 16:9 cards: add `--wide`. Without a mobile screen, set `mobile: false`.
+   Key art with dark rounded corners baked in (like Hi Lo's) needs `--corners=<radius at 1280 px>`,
+   or the corners show as dark wedges inside the rounded frames.
 3. The grid, filters, counts, reels and case study pick the project up automatically.
 
 ## Motion
 
 - Hero reels follow the Shining Pop V2 reel timing (wind-up, one stop tween with overshoot, 110 ms stagger).
 - Case studies open with a shared-element flight from the clicked card; arrows and ← → keys move between projects; links like `#work/rockbet` open a case directly.
-- The manifesto and principles are scroll-driven; the WebGL reel-stop hover runs only on desktop pointers with WebGL.
+- The manifesto, principles and contact card are scroll-driven; the WebGL reel-stop hover (spin from the pointer's side, lean, flick) runs only on desktop pointers with WebGL.
+- Pinned sections carry `refreshPriority: 1` so ScrollTrigger measures them before the triggers below them; keep it on any new pin, or those triggers fire early.
 - Everything respects `prefers-reduced-motion`; without JavaScript the page still shows its text, and the CV lists all work.
 
 ## Preview locally

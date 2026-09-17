@@ -454,7 +454,7 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
 .card-screen {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
   clip-path: inset(100% 0 0 0);
-  transition: clip-path 0.6s var(--ease-out-expo);
+  transition: clip-path 0.45s var(--ease-out-expo);
 }
 
 .card-body { display: grid; gap: 6px; padding-top: 18px; }
@@ -758,6 +758,7 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
 /* ---------- contact ---------- */
 
 .contact {
+  --bleed: max(var(--gutter), (100vw - var(--max)) / 2 + var(--gutter));
   position: relative;
   max-width: calc(var(--max) - 2 * var(--gutter));
   margin: var(--section-space) auto 0;
@@ -765,7 +766,14 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
   color: var(--lime-ink);
   isolation: isolate;
 }
-.contact-bg { position: absolute; inset: 0; z-index: -1; border-radius: var(--r-l); background: var(--lime); }
+/* The lime layer spans the viewport and is clipped to the card; app.js opens it edge to edge on scroll
+   (--open 0 → 1). Any scrollbar-width overshoot is cut by body's overflow-x: clip. */
+.contact-bg {
+  --open: 0;
+  position: absolute; inset: 0 calc(var(--bleed) * -1); z-index: -1;
+  background: var(--lime);
+  clip-path: inset(0 calc(var(--bleed) * (1 - var(--open))) round calc(var(--r-l) * (1 - var(--open))));
+}
 .contact-inner { padding: clamp(40px, 7vw, 112px) clamp(24px, 6vw, 96px); }
 .contact-kicker { font-size: var(--step-0); font-weight: 700; margin-bottom: clamp(16px, 2vw, 24px); }
 .contact-title { font-size: clamp(2.75rem, 1.4rem + 5.6vw, 6rem); line-height: 1; margin-bottom: clamp(32px, 5vw, 64px); }
@@ -793,7 +801,7 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
 .contact :focus-visible { outline-color: var(--lime-ink); }
 
 @media (max-width: 559px) {
-  .contact { margin-inline: 12px; }
+  .contact { --bleed: 12px; margin-inline: 12px; }
   .contact-links .btn { width: 100%; justify-content: space-between; }
   .contact-links li { flex: 1 1 100%; }
 }
@@ -836,10 +844,6 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
 }
 .case-flyer { position: fixed; z-index: 2; overflow: hidden; pointer-events: none; will-change: left, top, width, height; }
 .case-flyer img { width: 100%; height: 100%; object-fit: cover; }
-.case-flyer::after {
-  content: ""; position: absolute; inset: 0; opacity: var(--fade, 0);
-  background: linear-gradient(to bottom, color-mix(in oklch, var(--bg) 55%, transparent) 0, transparent 26%, transparent 45%, var(--bg) 100%);
-}
 .case-flyer.is-ghost { z-index: 0; }
 .case::backdrop { background: transparent; }
 .case:focus { outline: none; }
@@ -863,18 +867,36 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
 .case-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--line-soft); }
 .case-progress span { display: block; height: 100%; background: var(--lime); transform-origin: left; transform: scaleX(var(--p, 0)); }
 
-.case-cover { position: relative; z-index: 1; height: min(56vh, 600px); margin-top: -64px; overflow: hidden; }
-.case-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* The key art is shown whole: a frame at the art's own ratio over a blurred copy of itself. */
+.case-cover {
+  --cover-h: min(54svh, 600px);
+  position: relative; z-index: 1; isolation: isolate; overflow: hidden;
+  margin-top: -64px;
+  padding: calc(64px + clamp(12px, 2.5vw, 36px)) var(--gutter) clamp(32px, 4vw, 56px);
+  background: var(--bg);
+}
+.cover-ambient {
+  position: absolute; z-index: -1; top: -12%; left: -12%; width: 124%; height: 124%; max-width: none;
+  object-fit: cover; opacity: 0.55; filter: blur(56px) saturate(1.3);
+}
+.case-cover::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(to bottom, color-mix(in oklch, var(--bg) 45%, transparent), transparent 35%, color-mix(in oklch, var(--bg) 35%, transparent) 70%, var(--bg));
+}
+.cover-frame {
+  position: relative; margin-inline: auto;
+  width: min(100%, var(--cover-h) * 1280 / 900); aspect-ratio: 1280 / 900;
+  border-radius: var(--r-l); overflow: hidden; background: var(--surface);
+  box-shadow: 0 32px 72px -32px oklch(0 0 0 / 0.75);
+}
+.cover-frame.is-wide { width: min(100%, var(--cover-h) * 16 / 9); aspect-ratio: 16 / 9; }
+.cover-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cover-hi { opacity: 0; transition: opacity 0.45s var(--ease-out); }
 .cover-hi.is-loaded { opacity: 1; }
-.case-cover::after {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(to bottom, color-mix(in oklch, var(--bg) 55%, transparent) 0, transparent 26%, transparent 45%, var(--bg) 100%);
-}
 
 .case-head {
   position: relative; z-index: 1;
-  max-width: var(--max); margin: clamp(-150px, -11vw, -48px) auto 0;
+  max-width: var(--max); margin: 0 auto;
   padding-inline: var(--gutter);
   display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 24px 64px; align-items: end;
 }
@@ -947,7 +969,7 @@ html:not(.js) .tab[aria-selected="true"] { background: var(--lime); }
 }
 @media (max-width: 559px) {
   .case-bar { height: 56px; gap: 12px; }
-  .case-cover { height: 42vh; margin-top: -56px; }
+  .case-cover { margin-top: -56px; padding-top: calc(56px + 12px); }
   .case-crumb { display: none; }
   .icon-btn { width: 40px; height: 40px; }
   .next-link { grid-template-columns: minmax(0, 1fr); }
