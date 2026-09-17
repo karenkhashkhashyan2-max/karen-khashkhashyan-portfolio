@@ -78,6 +78,23 @@ Mechanical fixes only; no claims were added.
 - "Title: text" paragraphs became highlight lists; straight quotes became typographic quotes.
 - Phone number shown as in the CV: +374 77 93 92 33.
 
+## Awards research (17 Sep 2026)
+
+Checked SBC, SiGMA, EGR, IGA, European iGaming, Asia Gaming, CasinoBeats, AskGamblers and BAFTA pages.
+**None of the 22 games on this site, Sportcore or tether.bet appears on a shortlist or winners page**, so
+the site claims no awards. Pascal Gaming itself has studio-level results Karen could mention, clearly
+labelled as the studio's, if he wants to:
+
+| Year | Award | Result | Source |
+|---|---|---|---|
+| 2024 | SBC Awards, Casino / Slots Developer of the Year (Small) | Winner | https://casinobeats.com/2024/09/27/sbc-awards-2024-winners-revealed/ |
+| 2024 | Asia Gaming Awards, Fantasy/Virtuals Solution | Winner | https://asiagamingawards.com/the-awards-2024/ |
+| 2023 | iGaming Sword Awards, Casino Supplier of the Year | Winner | https://igamingexpress.com/igaming-sword-awards-winners-2023/ |
+| 2026 | IGA, Best Crash Game Developer / RNG Casino Supplier / Slot Provider | Finalist | https://gaming-awards.com/iga/iga-finalists/ |
+| 2026 | EGR B2B, Crash games supplier / Slot supplier under 5 years | Shortlisted | https://awards.egr.global/EGRB2BAwards/en/page/2026-shortlist |
+
+Game-level wins found (Blast, The Time, Franken Alive finalist, Avinho R10 shortlist) are not Karen's projects.
+
 ## Please confirm (Karen)
 
 1. **Highlight lists missing** for Pixel Road, Crash, Tornado Roulette and Bet On Poker. The source text
